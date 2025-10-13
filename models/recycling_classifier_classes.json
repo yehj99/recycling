@@ -1,0 +1,12 @@
+{
+  "class_names": [
+    "glass",
+    "paper",
+    "plastic",
+    "metal",
+    "trash"
+  ],
+  "num_classes": 5,
+  "model_type": "pretrained_efficientnetv2",
+  "description": "ImageNet 사전훈련된 EfficientNetV2-S 모델 (분리수거 품목에 특화되지 않음)"
+}

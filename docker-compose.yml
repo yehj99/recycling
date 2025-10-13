@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  recycling-app:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./recycling_app.db:/app/recycling_app.db
+    environment:
+      - DATABASE_URL=sqlite:///./recycling_app.db
+      - PYTHONPATH=/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/recycling/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL 버전 (선택사항)
+  recycling-app-postgres:
+    build: .
+    ports:
+      - "8001:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/recycling_db
+      - PYTHONPATH=/app
+    depends_on:
+      - db
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+    restart: unless-stopped
+
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=recycling_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
