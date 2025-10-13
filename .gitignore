@@ -54,8 +54,8 @@ Thumbs.db
 logs/
 
 # Model files (if too large)
-# models/*.h5
-# models/*.pkl
+models/*.h5
+models/*.pkl
 
 # Environment variables
 .env
