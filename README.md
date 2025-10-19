@@ -21,27 +21,89 @@ EfficientNetV2를 사용한 분리수거 품목 자동 분류 시스템입니다
 
 ## 설치 및 실행
 
-### 방법 1: Docker 사용 (권장)
+### Docker Compose 사용 (권장)
+
+#### 1. 개발 환경 실행
 
 ```bash
-# 전체 설정 (한 번에 실행)
-make setup
+# 개발 환경으로 실행
+docker-compose -f docker-compose.dev.yml up --build
 
-# 또는 단계별 실행
-make build
-make run
-make init-db
+# 백그라운드 실행
+docker-compose -f docker-compose.dev.yml up -d --build
 ```
 
-### 방법 2: 로컬 설치
+#### 2. 프로덕션 환경 실행
 
-### 1. 의존성 설치
+```bash
+# 프로덕션 환경으로 실행
+docker-compose -f docker-compose.prod.yml up --build
+
+# 백그라운드 실행
+docker-compose -f docker-compose.prod.yml up -d --build
+```
+
+#### 3. 기본 Docker Compose 실행
+
+```bash
+# 기본 설정으로 실행
+docker-compose up --build
+
+# 백그라운드 실행
+docker-compose up -d --build
+```
+
+#### 4. 서비스 중지
+
+```bash
+# 실행 중인 서비스 중지
+docker-compose down
+
+# 볼륨까지 삭제하며 중지
+docker-compose down -v
+```
+
+#### 5. 데이터베이스 초기화
+
+```bash
+# 데이터베이스 초기화 (샘플 데이터 포함)
+docker-compose exec recycling-app python init_database.py
+```
+
+#### 6. 서비스 상태 확인
+
+```bash
+# 실행 중인 컨테이너 확인
+docker-compose ps
+
+# 로그 확인
+docker-compose logs -f recycling-app
+
+# 특정 서비스 로그만 확인
+docker-compose logs recycling-app
+```
+
+#### 7. Docker Compose 설정 설명
+
+- **기본 설정** (`docker-compose.yml`): SQLite + PostgreSQL 옵션 포함
+- **개발 환경** (`docker-compose.dev.yml`): 코드 변경 시 자동 재시작 (--reload)
+- **프로덕션 환경** (`docker-compose.prod.yml`): 최적화된 설정, 리소스 제한
+
+#### 8. 포트 및 접속 정보
+
+- **API 서버**: http://localhost:8000
+- **API 문서**: http://localhost:8000/docs
+- **PostgreSQL 버전**: http://localhost:8001 (선택사항)
+
+### 로컬 설치 (Docker 없이)
+
+#### 1. 의존성 설치
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. 데이터 준비
+#### 2. 데이터 준비
 
 훈련 데이터를 다음과 같은 구조로 준비하세요:
 
@@ -58,25 +120,25 @@ data/
 │   └── trash/
 ```
 
-### 3. 모델 훈련
+#### 3. 모델 훈련
 
 ```bash
 python train_model.py --data_dir ./data/train --epochs 20 --model_path ./models/recycling_classifier.h5
 ```
 
-### 4. 추론 테스트
+#### 4. 추론 테스트
 
 ```bash
 python test_inference.py --image_path ./test_image.jpg --model_path ./models/recycling_classifier.h5
 ```
 
-### 5. 샘플 데이터 추가
+#### 5. 샘플 데이터 추가
 
 ```bash
 python add_sample_data.py
 ```
 
-### 6. API 서버 실행
+#### 6. API 서버 실행
 
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
