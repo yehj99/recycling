@@ -34,10 +34,10 @@ async def get_nearby_locations(
     limit: int = Query(10, description="최대 결과 수"),
     db: Session = Depends(get_db)
 ):
-    """주변 분리수거 배출 장소 조회"""
+    """주변 분리수거 배출 장소 조회 (공공 API + 로컬 DB)"""
     try:
         controller = LocationController(db)
-        response = controller.get_nearby_locations(
+        response = await controller.get_nearby_locations(
             latitude=latitude,
             longitude=longitude,
             waste_type=waste_type,

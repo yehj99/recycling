@@ -41,7 +41,13 @@ def register_services():
 def get_service_with_db(service_name: str, db: Session):
     """DB 세션이 필요한 서비스 가져오기"""
     if service_name in ['location_service', 'location_repository']:
-        return service_container.get(service_name, db)
+        # DB 세션이 필요한 서비스는 매번 새로 생성
+        if service_name == 'location_service':
+            from app.core.factories import LocationServiceFactory
+            return LocationServiceFactory.create_location_service(db)
+        elif service_name == 'location_repository':
+            from app.core.factories import LocationServiceFactory
+            return LocationServiceFactory.create_location_repository(db)
     else:
         return service_container.get(service_name)
 

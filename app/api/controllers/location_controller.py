@@ -21,7 +21,7 @@ class LocationController(BaseController):
         # 기본 검증 로직
         return True
     
-    def get_nearby_locations(self, 
+    async def get_nearby_locations(self, 
                            latitude: float, 
                            longitude: float,
                            waste_type: Optional[str] = None,
@@ -41,8 +41,8 @@ class LocationController(BaseController):
             if not RequestValidator.validate_limit(limit):
                 return APIResponse.error("제한 수는 0보다 크고 100 이하여야 합니다.")
             
-            # 주변 배출 장소 조회
-            locations = self.location_service.find_nearby_locations(
+            # 주변 배출 장소 조회 (공공 API + 로컬 DB)
+            locations = await self.location_service.find_nearby_locations(
                 latitude=latitude,
                 longitude=longitude,
                 waste_type=waste_type,

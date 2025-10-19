@@ -8,3 +8,5 @@ pillow
 numpy
 python-multipart
 aiofiles
+httpx
+requests

@@ -10,6 +10,7 @@ from sqlalchemy import and_
 from app.core.interfaces import ILocationService
 from app.models.location import RecyclingLocation, UserLocation
 from app.repositories.location_repository import LocationRepository, UserLocationRepository, LocationQueryBuilder
+from app.services.public_api_service import PublicAPIService
 
 
 class LocationService(ILocationService):
@@ -20,6 +21,7 @@ class LocationService(ILocationService):
         self.location_repo = LocationRepository(db_session)
         self.user_location_repo = UserLocationRepository(db_session)
         self.query_builder = LocationQueryBuilder(db_session)
+        self.public_api_service = PublicAPIService()
     
     def calculate_distance(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         """두 지점 간의 거리 계산 (km)"""
@@ -37,14 +39,14 @@ class LocationService(ILocationService):
         
         return distance
     
-    def find_nearby_locations(self, 
+    async def find_nearby_locations(self, 
                             latitude: float, 
                             longitude: float, 
                             waste_type: str = None,
                             radius_km: float = 5.0,
                             limit: int = 10) -> List[Dict]:
         """
-        주변 분리수거 배출 장소 찾기
+        주변 분리수거 배출 장소 찾기 (공공 API + 로컬 DB)
         
         Args:
             latitude: 사용자 위도
@@ -56,32 +58,59 @@ class LocationService(ILocationService):
         Returns:
             주변 배출 장소 목록
         """
-        # 쿼리 빌더를 사용한 조회
-        query = (self.query_builder
-                .active_only()
-                .within_radius(latitude, longitude, radius_km)
-                .order_by_distance(latitude, longitude)
-                .limit(limit))
+        all_locations = []
         
-        if waste_type:
-            query = query.by_waste_type(waste_type)
-        
-        locations = query.build()
-        
-        # 거리 계산 및 결과 변환
-        nearby_locations = []
-        for location in locations:
-            distance = self.calculate_distance(
-                latitude, longitude, 
-                location.latitude, location.longitude
+        # 1. 공공 API에서 배출장소 조회
+        try:
+            public_locations = await self.public_api_service.get_waste_facilities(
+                latitude=latitude,
+                longitude=longitude,
+                radius_km=radius_km,
+                waste_type=waste_type
             )
-            
-            if distance <= radius_km:
-                location_dict = location.to_dict()
-                location_dict['distance_km'] = round(distance, 2)
-                nearby_locations.append(location_dict)
+            all_locations.extend(public_locations)
+        except Exception as e:
+            print(f"공공 API 조회 실패: {e}")
         
-        return nearby_locations
+        # 2. 로컬 DB에서 배출장소 조회
+        try:
+            query = self.query_builder.active_only().within_radius(latitude, longitude, radius_km)
+            
+            if waste_type:
+                query = query.by_waste_type(waste_type)
+            
+            query = query.order_by_distance(latitude, longitude).limit(limit)
+            db_locations = query.build()
+            
+            # DB 결과를 딕셔너리로 변환
+            for location in db_locations:
+                distance = self.calculate_distance(
+                    latitude, longitude, 
+                    location.latitude, location.longitude
+                )
+                
+                if distance <= radius_km:
+                    location_dict = location.to_dict()
+                    location_dict['distance_km'] = round(distance, 2)
+                    location_dict['source'] = 'local_db'
+                    all_locations.append(location_dict)
+        except Exception as e:
+            print(f"로컬 DB 조회 실패: {e}")
+        
+        # 3. 거리순 정렬 및 중복 제거
+        all_locations.sort(key=lambda x: x['distance_km'])
+        
+        # 중복 제거 (이름과 주소 기준)
+        unique_locations = []
+        seen = set()
+        for location in all_locations:
+            key = (location.get('name', ''), location.get('address', ''))
+            if key not in seen:
+                seen.add(key)
+                unique_locations.append(location)
+        
+        # 4. 제한된 수만큼 반환
+        return unique_locations[:limit]
     
     def get_location_by_id(self, location_id: int) -> Optional[Dict]:
         """ID로 배출 장소 조회"""

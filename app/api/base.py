@@ -48,7 +48,8 @@ class BaseController(ABC):
     
     def get_service(self, service_name: str):
         """서비스 인스턴스 가져오기"""
-        return self.service_container.get(service_name)
+        from app.core.service_registry import get_service_with_db
+        return get_service_with_db(service_name, self.db)
 
 
 class APIResponse:
